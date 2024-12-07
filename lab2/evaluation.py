@@ -43,11 +43,11 @@ def evaluate_model(val_loader, model, device):
     dice_scores = []
 
     with torch.no_grad():
-        for i,(inputs, masks) in enumerate(val_loader):
+        for i,(inputs, masks,label) in enumerate(val_loader):
             if i > 20:
                 break
                 
-            inputs, masks = inputs.to(device), masks.to(device)
+            inputs, masks,label = inputs.to(device), masks.to(device), label.to(device)
 
             # Forward pass
             outputs = model(inputs)['out']
@@ -60,9 +60,38 @@ def evaluate_model(val_loader, model, device):
             dice = dice_score(pred_mask, masks)
             dice_scores.append(dice)
 
-            # Display segmentation examples for the first batch
-            display_segmentation_examples(inputs, masks, outputs, num_examples=1)
+            display_segmentation_examples(inputs, masks, outputs, num_examples=3)
 
     # Calculate the average Dice score
     avg_dice_score = np.mean(dice_scores)
     print(f"Average Dice Score: {avg_dice_score:.4f}")    
+
+
+def evaluate_classifier(val_loader, model, device, class_criterion):
+    model.eval()  # Set the model to evaluation mode
+    
+    total_loss = 0.0
+    correct_predictions = 0
+    total_samples = 0
+    
+    with torch.no_grad():  # Disable gradient calculation
+        for inputs, _, labels in val_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            # Forward pass through the classifier
+            outputs_cls = model(inputs)['classification']
+            loss_cls = class_criterion(outputs_cls, labels)
+            
+            total_loss += loss_cls.item()
+
+            _, predicted = torch.max(outputs_cls, 1)
+            correct_predictions += (predicted == labels).sum().item()
+            total_samples += labels.size(0)
+        
+    avg_loss = total_loss / len(val_loader)
+    accuracy = (correct_predictions / total_samples) * 100
+
+    print(f"Classifier Validation Loss: {avg_loss:.4f}")
+    print(f"Classifier Validation Accuracy: {accuracy:.2f}%")
+
+    return avg_loss, accuracy
