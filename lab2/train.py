@@ -1,3 +1,4 @@
+import os
 import torch
 import pandas as pd
 import torch.nn.functional as F
@@ -17,12 +18,14 @@ def save_checkpoint(model, optimizer, epoch, best_val_acc, path):
     }, path)
 
 def get_dataset_loaders(dataset_root,batch_size=4,val_size=0.2,max_samples=None):
+    print("Loading dataset...")
+
     preprocess = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
 
-    df = pd.read_csv(dataset_root + 'GroundTruth.csv')
+    df = pd.read_csv(os.path.join(dataset_root, 'GroundTruth.csv'))
 
     df['label'] = df.iloc[:, 1:].idxmax(axis=1).map({
         'MEL': 0,
