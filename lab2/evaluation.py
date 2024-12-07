@@ -2,6 +2,7 @@ import torch
 from matplotlib import pyplot as plt
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
+import seaborn as sns
 
 def dice_score(pred, target):
     pred = pred.flatten()
@@ -103,7 +104,12 @@ def evaluate_classifier(val_loader, model, device, class_criterion):
     f1_score = report["weighted avg"]["f1-score"]
     
     print("Confusion Matrix:")
-    print(conf_matrix)
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+    plt.title('Confusion Matrix')
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.show()
     print(f"Validation Loss: {avg_loss:.4f}")
     print(f"Accuracy: {accuracy:.2f}%")
     print(f"Precision: {precision:.4f}")
