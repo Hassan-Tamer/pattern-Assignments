@@ -1,6 +1,7 @@
 import torch
 from matplotlib import pyplot as plt
 import numpy as np
+from sklearn.metrics import classification_report, confusion_matrix
 
 def dice_score(pred, target):
     pred = pred.flatten()
@@ -67,11 +68,13 @@ def evaluate_model(val_loader, model, device):
     print(f"Average Dice Score: {avg_dice_score:.4f}")    
 
 
+
 def evaluate_classifier(val_loader, model, device, class_criterion):
     model.eval()  # Set the model to evaluation mode
     
+    all_preds = []
+    all_labels = []
     total_loss = 0.0
-    correct_predictions = 0
     total_samples = 0
     
     with torch.no_grad():  # Disable gradient calculation
@@ -82,16 +85,29 @@ def evaluate_classifier(val_loader, model, device, class_criterion):
             outputs_cls = model(inputs)['classification']
             loss_cls = class_criterion(outputs_cls, labels)
             
-            total_loss += loss_cls.item()
+            total_loss += loss_cls.item() * labels.size(0)  # Sum up batch loss
+            total_samples += labels.size(0)
 
             _, predicted = torch.max(outputs_cls, 1)
-            correct_predictions += (predicted == labels).sum().item()
-            total_samples += labels.size(0)
-        
-    avg_loss = total_loss / len(val_loader)
-    accuracy = (correct_predictions / total_samples) * 100
-
-    print(f"Classifier Validation Loss: {avg_loss:.4f}")
-    print(f"Classifier Validation Accuracy: {accuracy:.2f}%")
-
-    return avg_loss, accuracy
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+    
+    avg_loss = total_loss / total_samples  # Calculate average loss
+    
+    # Compute metrics
+    conf_matrix = confusion_matrix(all_labels, all_preds)
+    report = classification_report(all_labels, all_preds, output_dict=True)
+    accuracy = report["accuracy"] * 100
+    precision = report["weighted avg"]["precision"]
+    recall = report["weighted avg"]["recall"]
+    f1_score = report["weighted avg"]["f1-score"]
+    
+    print("Confusion Matrix:")
+    print(conf_matrix)
+    print(f"Validation Loss: {avg_loss:.4f}")
+    print(f"Accuracy: {accuracy:.2f}%")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1-Score: {f1_score:.4f}")
+    
+    return avg_loss, accuracy, precision, recall, f1_score, conf_matrix
