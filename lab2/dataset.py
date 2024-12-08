@@ -35,23 +35,30 @@ def get_labels_df(img_name,labels_df):
     label = labels_df.loc[labels_df['image'] == img_name, 'label'].values[0]
     return label
 
-def preload_ham10000(root,labels_df,val_size=0.2, seed=42 , max_samples=None):
+def preload_ham10000(root,labels_df,val_size=0.2, seed=42 , max_samples=None,removed_path = "/kaggle/input/removed-paths-file/removed_images.txt"):
     imgs_path = os.path.join(root, 'images')
     masks_path = os.path.join(root, 'masks')
 
     image_files = []
     mask_files = []
 
+    with open(removed_path, 'r') as file:
+        removed_basenames = {os.path.basename(line.strip()).split('.')[0] for line in file}
+
     for i,f in enumerate(os.listdir(imgs_path)):
         if f.endswith(('.jpg', '.png')):
-            image_files.append(f)
+            basename = f.split('.')[0]
+            if basename not in removed_basenames:
+                image_files.append(f)
         
         if max_samples is not None and i >= max_samples:
             break
     
     for i,f in enumerate(os.listdir(masks_path)):
         if f.endswith(('.jpg', '.png')):
-            mask_files.append(f)
+            basename = f.split('_segmentation')[0]  # Match mask base name to image base name
+            if basename not in removed_basenames:
+                mask_files.append(f)
 
         if max_samples is not None and i >= max_samples:
             break
