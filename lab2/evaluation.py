@@ -13,6 +13,14 @@ def dice_score(pred, target):
 
     return dice.item()
 
+def calculateIOU(pred, target):
+    pred = pred.flatten()
+    target = target.flatten()
+
+    intersection = (pred * target).sum()
+    union = pred.sum() + target.sum() - intersection
+
+    return (intersection + 1e-6) / (union + 1e-6)  
 
 def display_segmentation_examples(inputs, masks, outputs, num_examples=3):
     fig, axes = plt.subplots(num_examples, 3, figsize=(12, 4 * num_examples))
@@ -43,6 +51,7 @@ def display_segmentation_examples(inputs, masks, outputs, num_examples=3):
 def evaluate_model(val_loader, model, device):
     model.eval()
     dice_scores = []
+    iou = []
 
     with torch.no_grad():
         for i,(inputs, masks,label) in enumerate(val_loader):
@@ -60,12 +69,17 @@ def evaluate_model(val_loader, model, device):
             # Calculate the Dice score
             pred_mask = torch.argmax(outputs, dim=1)  # Get the predicted mask
             dice = dice_score(pred_mask, masks)
+            iou_score = calculateIOU(pred_mask, masks)
+            iou.append(iou_score)
             dice_scores.append(dice)
 
             display_segmentation_examples(inputs, masks, outputs, num_examples=3)
 
     # Calculate the average Dice score
     avg_dice_score = np.mean(dice_scores)
+    iou_tensor = torch.tensor(iou)
+    avg_iou = np.mean(iou_tensor.cpu().numpy())
+    print(f"Average IOU: {avg_iou:.4f}")
     print(f"Average Dice Score: {avg_dice_score:.4f}")    
 
 
